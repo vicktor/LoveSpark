@@ -87,6 +87,21 @@ this project is not affiliated with or endorsed by them.
 For personal use with your own hardware. **No warranty — of multiple orgasms,
 fitness for any particular purpose, or anything else.** Use at your own risk.
 
+## Credits
+
+Protocol work stands on these community projects:
+
+- **[OpenSpouse](https://github.com/Aurora-Nasa-1/OpenSpouse)** (MIT, Aurora-Nasa-1) —
+  the 14 app-side haptic waveforms are adapted from its `VibrationPatternEngine`, and the
+  0x00 "braking" idea (holding a stop on-air to beat the firmware's ~1 s watchdog) comes
+  from there.
+- **[LoveSpouse2Android](https://github.com/autoveteran007CZ/LoveSpouse2Android)**
+  (autoveteran007CZ) — its command table confirmed the per-channel families
+  (channel 1 `0x30–0x33`, channel 2 `0x40–0x43`) for 2-motor toys.
+
+The 9 firmware patterns and their mode bytes were recovered independently here, by
+decoding the original app's own BLE output (HCI snoop).
+
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE.md) — do whatever you want with it

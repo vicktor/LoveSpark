@@ -53,14 +53,29 @@ object Protocol {
         byteArrayOf(level.coerceIn(0, 10).toByte(), (mode and 1).toByte())
 
     /**
-     * Preset-mode families (DeviceNormalViewModel.group). Each is a base byte; mode N
-     * sends base+N and "stop" sends the base itself. Firmware plays the waveform; the
-     * command is re-broadcast to hold it.
+     * Command families (DeviceNormalViewModel.group), confirmed by decoding the original
+     * app's BLE output and cross-checked against the OpenSpouse / autoveteran007CZ
+     * captures. Each is a base byte; the command is re-broadcast to hold it.
+     *
+     *  - A, base 0x00: all channels. 0x00 = stop, 0x01..0x09 = the 9 firmware patterns.
+     *  - B, base 0x30: channel 1 only (2-motor toys). 0x30 stop, 0x31..0x33 speed 1..3.
+     *  - C, base 0x40: channel 2 only (2-motor toys). 0x40 stop, 0x41..0x43 speed 1..3.
+     *
+     * On a single-motor toy (e.g. 3744) channel 1 behaves like "all" and channel 2 is a no-op.
      */
     enum class ModeFamily(val label: String, val base: Int) {
-        A("Control (01-09)", 0x00),
-        B("Vibration (31-39)", 0x30),
-        C("Rotation/Suck (41-49)", 0x40),
+        A("All channels", 0x00),
+        B("Channel 1", 0x30),
+        C("Channel 2", 0x40),
+    }
+
+    /**
+     * Per-channel command byte for a 2-motor toy. [channel] 1 -> base 0x30, 2 -> base 0x40
+     * (anything else -> all-channels base 0x00). [speed] 0 = stop, 1..3 = speed step.
+     */
+    fun channelCmd(channel: Int, speed: Int): Byte {
+        val base = when (channel) { 1 -> 0x30; 2 -> 0x40; else -> 0x00 }
+        return (base or speed.coerceIn(0, 3)).toByte()
     }
 
     /** Convenience: UI intensity 0..100 -> broadcast gear byte. */

@@ -45,6 +45,16 @@ class Broadcaster(
     /** Hold a gear (0 = off, 1..9) by advertising continuously until [stop] or the next call. */
     fun sendGear(gear: Int) = sendCommand(byteArrayOf(Protocol.gearCmd(gear)))
 
+    /**
+     * Hard stop. Holds the all-stop command (0x00) on-air instead of just dropping the
+     * advertisement, so the toy brakes immediately — the firmware has a ~1 s watchdog that
+     * keeps the last motion running if it simply stops hearing us (OpenSpouse's "braking").
+     */
+    fun brake() = sendCommand(byteArrayOf(0x00))
+
+    /** Per-channel control for 2-motor toys: channel 1 or 2, speed 0 (stop)..3. */
+    fun sendChannel(channel: Int, speed: Int) = sendByte(Protocol.channelCmd(channel, speed).toInt() and 0xFF)
+
     /** Hold a single raw command byte (e.g. a preset-mode code) continuously. */
     fun sendByte(cmd: Int) = sendCommand(byteArrayOf((cmd and 0xFF).toByte()))
 

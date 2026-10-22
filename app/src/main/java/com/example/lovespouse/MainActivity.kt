@@ -85,8 +85,12 @@ class MainActivity : ComponentActivity() {
             if (p.isFirmware) {
                 broadcaster.sendByte(p.mode)   // advertises continuously until changed
             } else {
+                val steps = p.playbackSteps()
                 while (isActive) {
-                    for (s in p.stages) { broadcaster.sendGear(s); delay(p.intervalMs) }
+                    for (s in steps) {
+                        if (s.level <= 0) broadcaster.brake() else broadcaster.sendGear(s.level)
+                        delay(s.durationMs)
+                    }
                 }
             }
         }
@@ -129,45 +133,53 @@ class MainActivity : ComponentActivity() {
                     if (!broadcaster.isSupported)
                         Text("This phone does not support BLE advertising",
                             style = MaterialTheme.typography.bodyMedium)
-                    run {
-                        // 3x3 grid of equal-size cells
-                        val toggle: (VibePattern) -> Unit = { p ->
-                            if (activePattern?.name == p.name) {
-                                activePattern = null; broadcaster.sendGear(0); broadcaster.stop()
-                            } else activePattern = p
-                        }
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Patterns.ALL.chunked(3).forEach { rowItems ->
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    rowItems.forEach { p ->
-                                        val on = activePattern?.name == p.name
-                                        val cell = Modifier.weight(1f).height(52.dp)
-                                        if (on) Button(onClick = { toggle(p) }, modifier = cell,
-                                            contentPadding = PaddingValues(2.dp)) {
-                                            Text(p.name, textAlign = TextAlign.Center,
-                                                style = MaterialTheme.typography.labelMedium)
-                                        } else OutlinedButton(onClick = { toggle(p) }, modifier = cell,
-                                            contentPadding = PaddingValues(2.dp)) {
-                                            Text(p.name, textAlign = TextAlign.Center,
-                                                style = MaterialTheme.typography.labelMedium)
-                                        }
+                    val toggle: (VibePattern) -> Unit = { p ->
+                        if (activePattern?.name == p.name) {
+                            activePattern = null; broadcaster.brake()
+                        } else activePattern = p
+                    }
+
+                    // Firmware patterns: 3x3 grid of equal-size cells.
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Patterns.FIRMWARE.chunked(3).forEach { rowItems ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                rowItems.forEach { p ->
+                                    val on = activePattern?.name == p.name
+                                    val cell = Modifier.weight(1f).height(52.dp)
+                                    if (on) Button(onClick = { toggle(p) }, modifier = cell,
+                                        contentPadding = PaddingValues(2.dp)) {
+                                        Text(p.name, textAlign = TextAlign.Center,
+                                            style = MaterialTheme.typography.labelMedium)
+                                    } else OutlinedButton(onClick = { toggle(p) }, modifier = cell,
+                                        contentPadding = PaddingValues(2.dp)) {
+                                        Text(p.name, textAlign = TextAlign.Center,
+                                            style = MaterialTheme.typography.labelMedium)
                                     }
                                 }
                             }
                         }
-                        Button(onClick = { activePattern = null; broadcaster.sendGear(0); broadcaster.stop() },
-                            enabled = activePattern != null, modifier = Modifier.fillMaxWidth()) { Text("STOP") }
-                        if (customPatterns.isNotEmpty()) {
-                            Text("Your recordings", style = MaterialTheme.typography.bodySmall)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                customPatterns.forEach { p ->
-                                    val on = activePattern?.name == p.name
-                                    FilterChip(on, { toggle(p) }, label = { Text(p.name) })
-                                    OutlinedButton(onClick = {
-                                        if (on) { activePattern = null; broadcaster.sendGear(0); broadcaster.stop() }
-                                        customPatterns = CustomPatterns.delete(context, p.name)
-                                    }) { Text("✕") }
-                                }
+                    }
+                    Button(onClick = { activePattern = null; broadcaster.brake() },
+                        enabled = activePattern != null, modifier = Modifier.fillMaxWidth()) { Text("STOP") }
+
+                    // App-side waveforms (adapted from OpenSpouse).
+                    Text("Waveforms", style = MaterialTheme.typography.titleSmall)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Patterns.WAVEFORMS.forEach { p ->
+                            FilterChip(activePattern?.name == p.name, { toggle(p) }, label = { Text(p.name) })
+                        }
+                    }
+
+                    if (customPatterns.isNotEmpty()) {
+                        Text("Your recordings", style = MaterialTheme.typography.bodySmall)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            customPatterns.forEach { p ->
+                                val on = activePattern?.name == p.name
+                                FilterChip(on, { toggle(p) }, label = { Text(p.name) })
+                                OutlinedButton(onClick = {
+                                    if (on) { activePattern = null; broadcaster.brake() }
+                                    customPatterns = CustomPatterns.delete(context, p.name)
+                                }) { Text("✕") }
                             }
                         }
                     }
